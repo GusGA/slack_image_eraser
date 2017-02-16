@@ -66,6 +66,51 @@ func getImages(page int) (images []*slackObject) {
 	return images
 }
 
+func deleteImages(images []*slackObject) {
+	type deleteResponse struct {
+		Ok    bool   `json:"ok"`
+		Error error  `json:",omitempty"`
+		ID    string `json:",omitempty"`
+	}
+
+	deleteCh := make(chan *deleteResponse, 20)
+
+	for _, image := range images {
+		go func(id string) {
+			url := fmt.Sprintf("https://slack.com/api/files.delete?token=%s&file=%s", slackToken, id)
+			resp, err := http.Get(url)
+			defer resp.Body.Close()
+			content := &deleteResponse{Ok: false}
+			if err != nil {
+				content.Error = err
+			} else {
+				body, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					log.Fatal(err)
+				}
+				if err := json.Unmarshal(body, content); err != nil {
+					log.Fatal(err)
+				}
+			}
+			content.ID = id
+			deleteCh <- content
+
+		}(rem.ID)
+
+		select {
+		case content := <-deleteCh:
+			if content.Ok {
+				fmt.Printf("Image id: %s was successfully deleted\n", content.ID)
+			} else {
+				fmt.Printf("Image id %s could not be deleted, error %s\n", content.ID, content.Error)
+			}
+
+		}
+	}
+}
+
 func main() {
-	_ = getImages(1)
+	images := getImages(1)
+	fmt.Println("Deleting %d images"len(images))
+	deleteImages(images)
 }
