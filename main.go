@@ -97,7 +97,8 @@ func deleteImages(images []*slackObject) {
 
 		}(rem.ID)
 
-		select {
+	}
+	select {
 		case content := <-deleteCh:
 			if content.Ok {
 				fmt.Printf("Image id: %s was successfully deleted\n", content.ID)
@@ -106,7 +107,6 @@ func deleteImages(images []*slackObject) {
 			}
 
 		}
-	}
 }
 
 func main() {
